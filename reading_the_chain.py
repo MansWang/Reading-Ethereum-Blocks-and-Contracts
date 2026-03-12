@@ -56,35 +56,34 @@ def is_ordered_block(w3, block_num):
 
 	# TODO YOUR CODE HERE
  
-	tx_hashes = block.transactions
-	if len(tx_hashes) <= 1:
-		return True
- 
-	base_fee = block.get('baseFeePerGas', None) 
- 
-	transactions = [w3.eth.get_transaction(tx_hash) for tx_hash in tx_hashes]
- 
-	all_have_gas_price = all(tx.get('gasPrice') is not None for tx in transactions)
- 
-	def get_priority_fee(tx):
-	
-		if tx.get('maxPriorityFeePerGas') is not None:
-			return min(tx['maxPriorityFeePerGas'], tx['maxFeePerGas'] - base_fee)
-		
-		if all_have_gas_price:
-			return tx['gasPrice']  
-	
-		return tx['gasPrice'] - base_fee
- 
-	priority_fees = [get_priority_fee(tx) for tx in transactions]
- 
-	# Check that fees are in non-increasing (decreasing) order
+	block = w3.eth.get_block(block_num, full_transactions=True)
+	ordered = False
+
+	# TODO YOUR CODE HERE
+	base_fee = block.get("baseFeePerGas", 0)
+	txs = block.transactions
+
+	priority_fees = []
+
+	for tx in txs:
+		# Legacy transaction (Type 0)
+		if tx.get("type", 0) == 0:
+			priority_fee = tx.gasPrice - base_fee
+
+		# EIP-1559 transaction (Type 2)
+		else:
+			max_priority = tx.maxPriorityFeePerGas
+			max_fee = tx.maxFeePerGas
+			priority_fee = min(max_priority, max_fee - base_fee)
+
+		priority_fees.append(priority_fee)
+
+	# check if sorted decreasing
 	for i in range(len(priority_fees) - 1):
 		if priority_fees[i] < priority_fees[i + 1]:
-			ordered = False
-			break
- 
-	return ordered
+			return False
+
+	return True
  
 
 
